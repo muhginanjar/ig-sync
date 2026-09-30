@@ -1,0 +1,1 @@
+ALTER TABLE `posts` ADD `grid_key` text;

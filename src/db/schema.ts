@@ -8,7 +8,8 @@ export const posts = sqliteTable("posts", {
   caption: text("caption"),
   permalink: text("permalink").notNull(),
   postedAt: text("posted_at").notNull(), // ISO timestamp from IG
-  thumbKey: text("thumb_key"), // storage key used for grid & OG image
+  thumbKey: text("thumb_key"), // full-size cover, used for link previews (OG image)
+  gridKey: text("grid_key"), // small square WebP for the grid
   syncedAt: text("synced_at").notNull(),
 });
 

@@ -71,7 +71,16 @@ export default function ShareActions({
 
   useEffect(() => {
     const total = files.reduce((sum, f) => sum + f.sizeBytes, 0);
-    if (total <= AUTO_PREPARE_BYTES) prepare().catch(() => {});
+    if (total > AUTO_PREPARE_BYTES) return;
+    // Wait until the page (and the media on screen) has loaded, so preparing
+    // share files never competes with what the visitor is looking at.
+    const run = () => void prepare().catch(() => {});
+    if ("requestIdleCallback" in window) {
+      const id = requestIdleCallback(run, { timeout: 3000 });
+      return () => cancelIdleCallback(id);
+    }
+    const id = setTimeout(run, 1500); // Safari < 18 has no requestIdleCallback
+    return () => clearTimeout(id);
   }, [files, prepare]);
 
   /**

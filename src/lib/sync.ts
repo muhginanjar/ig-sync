@@ -1,7 +1,8 @@
-import { eq, notInArray } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, notInArray } from "drizzle-orm";
+import sharp from "sharp";
 import { getDb, postMedia, posts } from "@/db";
 import { listAllMedia, type IgChild, type IgMedia } from "./instagram";
-import { putObject } from "./storage";
+import { getObject, putObject } from "./storage";
 
 const EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -48,7 +49,19 @@ async function upload(url: string, keyBase: string) {
   const { body, contentType } = await download(url);
   const key = `${keyBase}.${EXT[contentType] ?? "bin"}`;
   await putObject(key, body, contentType);
-  return { key, contentType, sizeBytes: body.length };
+  return { stored: { key, contentType, sizeBytes: body.length }, body };
+}
+
+/** Small square WebP for the grid (~30 KB instead of a full-size original). */
+async function uploadGridThumb(cover: Buffer, dir: string) {
+  const key = `${dir}/grid.webp`;
+  const webp = await sharp(cover)
+    .rotate() // respect EXIF orientation
+    .resize(480, 480, { fit: "cover" })
+    .webp({ quality: 75 })
+    .toBuffer();
+  await putObject(key, webp, "image/webp");
+  return key;
 }
 
 /** A single IMAGE/VIDEO post is treated as a one-item carousel. */
@@ -67,21 +80,27 @@ function itemsOf(post: IgMedia): IgChild[] {
 async function importPost(post: IgMedia, log: (m: string) => void) {
   const dir = `posts/${post.id}`;
   const rows: (typeof postMedia.$inferInsert)[] = [];
+  let cover: { key: string; body: Buffer } | undefined;
 
   for (const [position, item] of itemsOf(post).entries()) {
     if (!item.media_url) {
       log(`  ! ${post.id} item ${position}: media_url kosong (kemungkinan diblokir IG), dilewati`);
       continue;
     }
-    const stored = await upload(item.media_url, `${dir}/${position}-${item.id}`);
+    const { stored, body } = await upload(item.media_url, `${dir}/${position}-${item.id}`);
     rows.push({ id: item.id, postId: post.id, position, mediaType: item.media_type, ...stored });
+    if (position === 0 && item.media_type === "IMAGE") cover = { key: stored.key, body };
   }
 
-  // Grid thumbnail: first image as-is, or the video's cover frame.
+  // Cover: the first image as-is, otherwise the video's cover frame.
   const first = itemsOf(post)[0];
-  let thumbKey = rows.find((r) => r.position === 0 && r.mediaType === "IMAGE")?.key ?? null;
   const coverUrl = first?.thumbnail_url ?? post.thumbnail_url;
-  if (!thumbKey && coverUrl) thumbKey = (await upload(coverUrl, `${dir}/thumb`)).key;
+  if (!cover && coverUrl) {
+    const { stored, body } = await upload(coverUrl, `${dir}/thumb`);
+    cover = { key: stored.key, body };
+  }
+  const thumbKey = cover?.key ?? null;
+  const gridKey = cover ? await uploadGridThumb(cover.body, dir) : null;
 
   getDb().transaction((tx) => {
     tx.insert(posts)
@@ -92,16 +111,42 @@ async function importPost(post: IgMedia, log: (m: string) => void) {
         permalink: post.permalink,
         postedAt: post.timestamp,
         thumbKey,
+        gridKey,
         syncedAt: new Date().toISOString(),
       })
       .onConflictDoUpdate({
         target: posts.id,
-        set: { caption: post.caption ?? null, thumbKey, syncedAt: new Date().toISOString() },
+        set: { caption: post.caption ?? null, thumbKey, gridKey, syncedAt: new Date().toISOString() },
       })
       .run();
     tx.delete(postMedia).where(eq(postMedia.postId, post.id)).run();
     if (rows.length) tx.insert(postMedia).values(rows).run();
   });
+}
+
+/** Creates grid thumbnails for posts imported before they existed. */
+async function backfillGridThumbs(log: (m: string) => void) {
+  const missing = getDb()
+    .select({ id: posts.id, thumbKey: posts.thumbKey })
+    .from(posts)
+    .where(and(isNull(posts.gridKey), isNotNull(posts.thumbKey)))
+    .all();
+  if (!missing.length) return;
+
+  log(`Membuat thumbnail grid untuk ${missing.length} post lama…`);
+  let done = 0;
+  for (const post of missing) {
+    try {
+      const obj = await getObject(post.thumbKey!);
+      const cover = Buffer.from(await obj.Body!.transformToByteArray());
+      const gridKey = await uploadGridThumb(cover, `posts/${post.id}`);
+      getDb().update(posts).set({ gridKey }).where(eq(posts.id, post.id)).run();
+      done++;
+    } catch (err) {
+      log(`  ✗ thumbnail ${post.id}: ${(err as Error).message}`);
+    }
+  }
+  log(`Thumbnail grid: ${done}/${missing.length} selesai.`);
 }
 
 export async function syncInstagram({
@@ -130,6 +175,8 @@ export async function syncInstagram({
       log(`  ✗ ${post.id} dilewati: ${(err as Error).message}`);
     }
   }
+
+  await backfillGridThumbs(log);
 
   // Posts deleted on IG disappear from the app. Stored files are kept
   // (Wasabi bills a 90-day minimum anyway).

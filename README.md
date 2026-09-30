@@ -39,11 +39,13 @@ pm2 start ecosystem.config.cjs   # web :$PORT (default 3000) + cron sync (30 men
 pm2 save && pm2 startup          # auto-start saat server reboot
 ```
 
-Update:
+Update (pull, install, build, migrate, reload):
 
 ```bash
-git pull && npm ci && npm run build && npm run db:migrate && pm2 reload ig-sync-web
+npm run deploy
 ```
+
+Perubahan lokal di server (biasanya `package-lock.json` setelah `npm install`) otomatis disimpan ke `git stash`, jadi tidak perlu stash manual. Di server selalu pakai `npm ci`, bukan `npm install`.
 
 Ganti port lewat `PORT` di `.env`, lalu `pm2 delete ig-sync-web && pm2 start ecosystem.config.cjs --only ig-sync-web && pm2 save`. Pasang Nginx + HTTPS di depan port tersebut. Share file di HP hanya jalan lewat HTTPS.
 
