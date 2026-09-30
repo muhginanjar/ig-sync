@@ -1,0 +1,25 @@
+# env / secrets
+.env
+.env*.local
+
+# deps & build
+node_modules/
+.next/
+out/
+dist/
+
+# sqlite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+
+# misc
+.DS_Store
+*.log
+
+# next / ts
+next-env.d.ts
+*.tsbuildinfo
+.vercel
