@@ -1,6 +1,7 @@
 // PM2 config. Start with: pm2 start ecosystem.config.cjs
 // Next.js reads .env itself, but picks its port before doing so, so PORT
 // is loaded here and passed to the process. The tsx scripts use dotenv too.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 require("dotenv").config({ path: `${__dirname}/.env`, quiet: true });
 
 const PORT = process.env.PORT || "3000";

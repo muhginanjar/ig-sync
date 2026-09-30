@@ -1,5 +1,5 @@
 import { eq, notInArray } from "drizzle-orm";
-import { db, postMedia, posts } from "@/db";
+import { getDb, postMedia, posts } from "@/db";
 import { listAllMedia, type IgChild, type IgMedia } from "./instagram";
 import { putObject } from "./storage";
 
@@ -58,7 +58,7 @@ async function importPost(post: IgMedia, log: (m: string) => void) {
   const coverUrl = first?.thumbnail_url ?? post.thumbnail_url;
   if (!thumbKey && coverUrl) thumbKey = (await upload(coverUrl, `${dir}/thumb`)).key;
 
-  db.transaction((tx) => {
+  getDb().transaction((tx) => {
     tx.insert(posts)
       .values({
         id: post.id,
@@ -83,7 +83,7 @@ export async function syncInstagram({
   full = false,
   log = console.log,
 }: { full?: boolean; log?: (m: string) => void } = {}) {
-  const known = new Set(db.select({ id: posts.id }).from(posts).all().map((p) => p.id));
+  const known = new Set(getDb().select({ id: posts.id }).from(posts).all().map((p) => p.id));
   const seen: string[] = [];
   let imported = 0;
 
@@ -91,7 +91,7 @@ export async function syncInstagram({
     seen.push(post.id);
     if (known.has(post.id) && !full) {
       // Media already stored; just keep the caption in sync (it can be edited on IG).
-      db.update(posts).set({ caption: post.caption ?? null }).where(eq(posts.id, post.id)).run();
+      getDb().update(posts).set({ caption: post.caption ?? null }).where(eq(posts.id, post.id)).run();
       continue;
     }
     log(`→ ${post.media_type.padEnd(14)} ${post.id} ${post.timestamp}`);
@@ -102,7 +102,7 @@ export async function syncInstagram({
   // Posts deleted on IG disappear from the app. Stored files are kept
   // (Wasabi bills a 90-day minimum anyway).
   const removed = seen.length
-    ? db.delete(posts).where(notInArray(posts.id, seen)).run().changes
+    ? getDb().delete(posts).where(notInArray(posts.id, seen)).run().changes
     : 0;
 
   log(`Selesai: ${seen.length} post di IG, ${imported} diimpor, ${removed} dihapus.`);

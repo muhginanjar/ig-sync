@@ -25,6 +25,7 @@ npm run dev            # http://localhost:3000
 | `npm run sync` | Impor post baru, update caption, hapus post yang sudah dihapus di IG |
 | `npm run sync -- --full` | Download ulang semua media |
 | `npm run token:refresh` | Perpanjang token IG 60 hari (jalankan mingguan) |
+| `npm run db:migrate` | Terapkan migration ke database (jalankan setelah deploy) |
 | `npm run db:generate` | Buat migration baru setelah mengubah `src/db/schema.ts` |
 
 ## Production (PM2)
@@ -32,7 +33,8 @@ npm run dev            # http://localhost:3000
 ```bash
 npm ci
 npm run build
-npm run sync                     # sync pertama sekaligus membuat database
+npm run db:migrate               # buat/update tabel database
+npm run sync                     # sync pertama
 pm2 start ecosystem.config.cjs   # web :$PORT (default 3000) + cron sync (30 menit) + cron token (Senin 03:00)
 pm2 save && pm2 startup          # auto-start saat server reboot
 ```
@@ -40,7 +42,7 @@ pm2 save && pm2 startup          # auto-start saat server reboot
 Update:
 
 ```bash
-git pull && npm ci && npm run build && pm2 reload ig-sync-web
+git pull && npm ci && npm run build && npm run db:migrate && pm2 reload ig-sync-web
 ```
 
 Ganti port lewat `PORT` di `.env`, lalu `pm2 delete ig-sync-web && pm2 start ecosystem.config.cjs --only ig-sync-web && pm2 save`. Pasang Nginx + HTTPS di depan port tersebut. Share file di HP hanya jalan lewat HTTPS.

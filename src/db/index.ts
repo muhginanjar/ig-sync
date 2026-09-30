@@ -9,14 +9,25 @@ function open() {
   const file = process.env.DATABASE_PATH ?? "./data/app.db";
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const sqlite = new Database(file);
+  sqlite.pragma("busy_timeout = 5000"); // web + cron processes share the file
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
-  const db = drizzle(sqlite, { schema });
-  migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
-  return db;
+  return drizzle(sqlite, { schema });
 }
 
-// Reuse one connection across hot reloads in dev.
+// Opened lazily: `next build` imports route modules in parallel workers and
+// must not touch the database. One connection is reused across dev reloads.
 const g = globalThis as unknown as { __db?: ReturnType<typeof open> };
-export const db = (g.__db ??= open());
+export function getDb() {
+  return (g.__db ??= open());
+}
+
+/**
+ * Applies pending migrations. Run from a single process only
+ * (`npm run db:migrate` or the sync script), never from the web server.
+ */
+export function migrateDb() {
+  migrate(getDb(), { migrationsFolder: path.join(process.cwd(), "drizzle") });
+}
+
 export * from "./schema";
