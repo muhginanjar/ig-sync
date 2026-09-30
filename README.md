@@ -27,12 +27,23 @@ npm run dev            # http://localhost:3000
 | `npm run token:refresh` | Perpanjang token IG 60 hari (jalankan mingguan) |
 | `npm run db:generate` | Buat migration baru setelah mengubah `src/db/schema.ts` |
 
-Contoh crontab di server:
+## Production (PM2)
 
-```cron
-*/30 * * * * cd /app && npm run sync >> logs/sync.log 2>&1
-0 3 * * 1    cd /app && npm run token:refresh >> logs/token.log 2>&1
+```bash
+npm ci
+npm run build
+npm run sync                     # sync pertama sekaligus membuat database
+pm2 start ecosystem.config.cjs   # web :3000 + cron sync (30 menit) + cron token (Senin 03:00)
+pm2 save && pm2 startup          # auto-start saat server reboot
 ```
+
+Update:
+
+```bash
+git pull && npm ci && npm run build && pm2 reload ig-sync-web
+```
+
+Pasang Nginx + HTTPS di depan port 3000. Share file di HP hanya jalan lewat HTTPS.
 
 ## Cara kerja
 
