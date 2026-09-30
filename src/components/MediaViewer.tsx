@@ -1,7 +1,47 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { LoaderCircle } from "lucide-react";
 import type { ShareFile } from "./types";
+
+/** One slide with its own spinner, hidden once the media can be shown. */
+function Slide({ item, index }: { item: ShareFile; index: number }) {
+  const [loaded, setLoaded] = useState(false);
+  const done = () => setLoaded(true);
+
+  return (
+    <div className="relative size-full shrink-0 snap-center">
+      {!loaded && (
+        <LoaderCircle className="absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 animate-spin text-white/60" />
+      )}
+      {item.type === "VIDEO" ? (
+        <video
+          src={item.displayUrl}
+          controls
+          playsInline
+          preload="metadata"
+          // iOS shows no frame before play, so metadata is the "ready" signal.
+          onLoadedMetadata={done}
+          onError={done}
+          className="relative size-full object-contain"
+        />
+      ) : (
+        <img
+          // Cached images can finish before React hydrates and never fire onLoad.
+          ref={(el) => {
+            if (el?.complete) done();
+          }}
+          src={item.displayUrl}
+          alt={`Slide ${index + 1}`}
+          loading={index === 0 ? "eager" : "lazy"}
+          onLoad={done}
+          onError={done}
+          className="relative size-full object-contain"
+        />
+      )}
+    </div>
+  );
+}
 
 export default function MediaViewer({ items }: { items: ShareFile[] }) {
   const track = useRef<HTMLDivElement>(null);
@@ -19,26 +59,9 @@ export default function MediaViewer({ items }: { items: ShareFile[] }) {
         }
         className="flex aspect-[4/5] snap-x snap-mandatory overflow-x-auto [scrollbar-width:none]"
       >
-        {items.map((item, i) =>
-          item.type === "VIDEO" ? (
-            <video
-              key={item.id}
-              src={item.displayUrl}
-              controls
-              playsInline
-              preload="metadata"
-              className="size-full shrink-0 snap-center object-contain"
-            />
-          ) : (
-            <img
-              key={item.id}
-              src={item.displayUrl}
-              alt={`Slide ${i + 1}`}
-              loading={i === 0 ? "eager" : "lazy"}
-              className="size-full shrink-0 snap-center object-contain"
-            />
-          ),
-        )}
+        {items.map((item, i) => (
+          <Slide key={item.id} item={item} index={i} />
+        ))}
       </div>
 
       {items.length > 1 && (

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listPosts } from "@/lib/posts";
 import { Images, Play } from "lucide-react";
+import TilePending from "@/components/TilePending";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export default function Home() {
               )}
             </span>
           )}
+          <TilePending />
         </Link>
       ))}
     </div>
