@@ -43,7 +43,7 @@ export default function ShareActions({
 }: {
   files: ShareFile[];
   caption: string;
-  permalink: string;
+  permalink: string | null; // null = post only exists in this app
 }) {
   const prepared = useRef<Promise<File[]> | null>(null);
   const [status, setStatus] = useState<Status>("idle");
@@ -97,7 +97,8 @@ export default function ShareActions({
   }
 
   async function shareLink() {
-    const url = permalink; // share the original Instagram post, not this page
+    // IG posts share the original Instagram post; app-only posts share this page.
+    const url = permalink ?? window.location.href;
     if (navigator.share) {
       try {
         // No `title`: WhatsApp & others would prepend it and repeat the caption.
@@ -107,7 +108,7 @@ export default function ShareActions({
       }
     } else {
       await navigator.clipboard.writeText(caption ? `${caption}\n\n${url}` : url);
-      notify(caption ? "Caption + link Instagram disalin" : "Link Instagram disalin");
+      notify(caption ? "Caption + link disalin" : "Link disalin");
     }
   }
 
@@ -182,19 +183,21 @@ export default function ShareActions({
         <MainIcon className={`size-5 ${status === "preparing" ? "animate-spin" : ""}`} />
         {mainLabel}
       </button>
-      <a
-        href={commentsUrl(permalink)}
-        target="_blank"
-        rel="noreferrer"
-        className={`${secondary} w-full py-2.5`}
-      >
-        <MessageCircle className="size-4" />
-        Komentar di Instagram
-      </a>
+      {permalink && (
+        <a
+          href={commentsUrl(permalink)}
+          target="_blank"
+          rel="noreferrer"
+          className={`${secondary} w-full py-2.5`}
+        >
+          <MessageCircle className="size-4" />
+          Komentar di Instagram
+        </a>
+      )}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <button onClick={shareLink} className={secondary}>
           <Link className="size-4" />
-          Bagikan link IG
+          {permalink ? "Bagikan link IG" : "Bagikan link"}
         </button>
         <button onClick={download} className={secondary}>
           <Download className="size-4" />
@@ -206,10 +209,12 @@ export default function ShareActions({
             Salin caption
           </button>
         )}
-        <a href={permalink} target="_blank" rel="noreferrer" className={secondary}>
-          <ExternalLink className="size-4" />
-          Lihat di IG
-        </a>
+        {permalink && (
+          <a href={permalink} target="_blank" rel="noreferrer" className={secondary}>
+            <ExternalLink className="size-4" />
+            Lihat di IG
+          </a>
+        )}
       </div>
       <p aria-live="polite" className="h-5 text-center text-sm text-neutral-500">
         {toast}

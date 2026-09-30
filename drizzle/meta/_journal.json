@@ -15,6 +15,13 @@
       "when": 1790761460646,
       "tag": "0001_grid_thumbnails",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790768930204,
+      "tag": "0002_local_posts",
+      "breakpoints": true
     }
   ]
 }

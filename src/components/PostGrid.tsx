@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Images, LoaderCircle, Play } from "lucide-react";
+import { Images, LoaderCircle, Play, Sparkles } from "lucide-react";
 import type { TabId, Tile } from "@/lib/tabs";
 import TilePending from "./TilePending";
 
@@ -75,6 +75,14 @@ export default function PostGrid({
                 height={480}
                 className="size-full object-cover transition hover:opacity-90"
               />
+            )}
+            {tile.local && (
+              <span
+                title="Hanya di aplikasi"
+                className="absolute left-1.5 top-1.5 rounded-full bg-amber-400 p-1 text-amber-950 shadow"
+              >
+                <Sparkles className="size-3.5" />
+              </span>
             )}
             {tile.mediaType !== "IMAGE" && (
               <span className="absolute right-1.5 top-1.5 text-white drop-shadow">

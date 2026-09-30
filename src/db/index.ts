@@ -27,7 +27,16 @@ export function getDb() {
  * (`npm run db:migrate` or the sync script), never from the web server.
  */
 export function migrateDb() {
-  migrate(getDb(), { migrationsFolder: path.join(process.cwd(), "drizzle") });
+  const db = getDb();
+  // Migrations that rebuild a table DROP it; with foreign keys on, that would
+  // cascade-delete post_media. The PRAGMA must be set outside the migration
+  // transaction to take effect.
+  db.$client.pragma("foreign_keys = OFF");
+  try {
+    migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
+  } finally {
+    db.$client.pragma("foreign_keys = ON");
+  }
 }
 
 export * from "./schema";

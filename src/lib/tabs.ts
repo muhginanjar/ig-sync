@@ -19,6 +19,7 @@ export function tabOf(id: unknown) {
 export type Tile = {
   id: string;
   mediaType: Post["mediaType"];
+  local: boolean; // uploaded through /admin, not on Instagram
   thumbUrl: string | null;
   alt: string;
 };
@@ -28,6 +29,7 @@ function toTile(p: Post): Tile {
   return {
     id: p.id,
     mediaType: p.mediaType,
+    local: p.source === "local",
     thumbUrl: key ? `/media/${key}` : null,
     alt: p.caption?.slice(0, 100) ?? "",
   };

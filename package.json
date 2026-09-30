@@ -11,7 +11,8 @@
     "token:refresh": "tsx scripts/refresh-token.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
-    "deploy": "bash scripts/deploy.sh"
+    "deploy": "bash scripts/deploy.sh",
+    "storage:cors": "tsx scripts/storage-cors.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1143.0",

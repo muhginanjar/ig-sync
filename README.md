@@ -26,6 +26,7 @@ npm run dev            # http://localhost:3000
 | `npm run sync -- --full` | Download ulang semua media |
 | `npm run token:refresh` | Perpanjang token IG 60 hari (jalankan mingguan) |
 | `npm run db:migrate` | Terapkan migration ke database (jalankan setelah deploy) |
+| `npm run storage:cors` | Izinkan upload dari browser ke Wasabi (sekali, untuk halaman admin) |
 | `npm run db:generate` | Buat migration baru setelah mengubah `src/db/schema.ts` |
 
 ## Production (PM2)
@@ -48,6 +49,19 @@ npm run deploy
 Perubahan lokal di server (biasanya `package-lock.json` setelah `npm install`) otomatis disimpan ke `git stash`, jadi tidak perlu stash manual. Di server selalu pakai `npm ci`, bukan `npm install`.
 
 Ganti port lewat `PORT` di `.env`, lalu `pm2 delete ig-sync-web && pm2 start ecosystem.config.cjs --only ig-sync-web && pm2 save`. Pasang Nginx + HTTPS di depan port tersebut. Share file di HP hanya jalan lewat HTTPS.
+
+## Post khusus aplikasi (`/admin`)
+
+Foto, video, atau carousel yang tidak diposting di Instagram bisa ditambahkan lewat `/admin`:
+
+1. Isi `ADMIN_PASSWORD` (minimal 8 karakter) dan `SITE_URL` di `.env`.
+2. Jalankan `npm run storage:cors` sekali, supaya browser boleh upload langsung ke Wasabi.
+3. Buka `https://<domain>/admin`, login, lalu tekan **Post baru**.
+
+- Post diurutkan bersama post IG berdasarkan tanggal posting.
+- Tanggal di masa depan = terjadwal: tidak tampil ke publik sampai waktunya tiba.
+- Di grid, post ini ditandai icon ✨. Di halaman detail, tombol yang khusus IG disembunyikan, dan "Bagikan link" membagikan link halaman aplikasi.
+- Sync IG tidak pernah menghapus post ini.
 
 ## Cara kerja
 

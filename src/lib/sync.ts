@@ -1,8 +1,8 @@
 import { and, eq, isNotNull, isNull, notInArray } from "drizzle-orm";
-import sharp from "sharp";
 import { getDb, postMedia, posts } from "@/db";
 import { listAllMedia, type IgChild, type IgMedia } from "./instagram";
 import { getObject, putObject } from "./storage";
+import { uploadGridThumb } from "./thumbs";
 
 const EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -52,17 +52,7 @@ async function upload(url: string, keyBase: string) {
   return { stored: { key, contentType, sizeBytes: body.length }, body };
 }
 
-/** Small square WebP for the grid (~30 KB instead of a full-size original). */
-async function uploadGridThumb(cover: Buffer, dir: string) {
-  const key = `${dir}/grid.webp`;
-  const webp = await sharp(cover)
-    .rotate() // respect EXIF orientation
-    .resize(480, 480, { fit: "cover" })
-    .webp({ quality: 75 })
-    .toBuffer();
-  await putObject(key, webp, "image/webp");
-  return key;
-}
+
 
 /** A single IMAGE/VIDEO post is treated as a one-item carousel. */
 function itemsOf(post: IgMedia): IgChild[] {
@@ -178,10 +168,13 @@ export async function syncInstagram({
 
   await backfillGridThumbs(log);
 
-  // Posts deleted on IG disappear from the app. Stored files are kept
-  // (Wasabi bills a 90-day minimum anyway).
+  // Posts deleted on IG disappear from the app; local posts are never touched.
+  // Stored files are kept (Wasabi bills a 90-day minimum anyway).
   const removed = seen.length
-    ? getDb().delete(posts).where(notInArray(posts.id, seen)).run().changes
+    ? getDb()
+        .delete(posts)
+        .where(and(eq(posts.source, "instagram"), notInArray(posts.id, seen)))
+        .run().changes
     : 0;
 
   log(
