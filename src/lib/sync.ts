@@ -12,11 +12,36 @@ const EXT: Record<string, string> = {
   "video/quicktime": "mov",
 };
 
-async function download(url: string) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Gagal download ${res.status}: ${url}`);
+const RETRY_DELAYS_MS = [2_000, 5_000, 15_000];
+
+class HttpError extends Error {
+  constructor(readonly status: number) {
+    super(`HTTP ${status}`);
+  }
+}
+
+async function downloadOnce(url: string) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(5 * 60_000) });
+  if (!res.ok) throw new HttpError(res.status);
   const contentType = (res.headers.get("content-type") ?? "application/octet-stream").split(";")[0];
   return { body: Buffer.from(await res.arrayBuffer()), contentType };
+}
+
+/** IG's CDN occasionally drops connections on large videos, so retry network errors and 429/5xx. */
+async function download(url: string) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await downloadOnce(url);
+    } catch (err) {
+      const retryable = !(err instanceof HttpError) || err.status === 429 || err.status >= 500;
+      if (!retryable || attempt >= RETRY_DELAYS_MS.length) {
+        throw new Error(`Gagal download setelah ${attempt + 1}x percobaan: ${(err as Error).message}`, {
+          cause: err,
+        });
+      }
+      await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+    }
+  }
 }
 
 async function upload(url: string, keyBase: string) {
@@ -85,6 +110,7 @@ export async function syncInstagram({
 }: { full?: boolean; log?: (m: string) => void } = {}) {
   const known = new Set(getDb().select({ id: posts.id }).from(posts).all().map((p) => p.id));
   const seen: string[] = [];
+  const failed: string[] = [];
   let imported = 0;
 
   for await (const post of listAllMedia()) {
@@ -95,8 +121,14 @@ export async function syncInstagram({
       continue;
     }
     log(`→ ${post.media_type.padEnd(14)} ${post.id} ${post.timestamp}`);
-    await importPost(post, log);
-    imported++;
+    try {
+      await importPost(post, log);
+      imported++;
+    } catch (err) {
+      // Nothing is written to the DB for a failed post, so the next sync retries it.
+      failed.push(post.id);
+      log(`  ✗ ${post.id} dilewati: ${(err as Error).message}`);
+    }
   }
 
   // Posts deleted on IG disappear from the app. Stored files are kept
@@ -105,6 +137,9 @@ export async function syncInstagram({
     ? getDb().delete(posts).where(notInArray(posts.id, seen)).run().changes
     : 0;
 
-  log(`Selesai: ${seen.length} post di IG, ${imported} diimpor, ${removed} dihapus.`);
-  return { total: seen.length, imported, removed };
+  log(
+    `Selesai: ${seen.length} post di IG, ${imported} diimpor, ${failed.length} gagal, ${removed} dihapus.`,
+  );
+  if (failed.length) log(`Post gagal akan dicoba lagi di sync berikutnya: ${failed.join(", ")}`);
+  return { total: seen.length, imported, failed, removed };
 }
