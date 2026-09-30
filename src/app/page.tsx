@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listPosts } from "@/lib/posts";
-import { CarouselIcon, VideoIcon } from "@/components/icons";
+import { Images, Play } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +34,9 @@ export default function Home() {
           {post.mediaType !== "IMAGE" && (
             <span className="absolute right-1.5 top-1.5 text-white drop-shadow">
               {post.mediaType === "VIDEO" ? (
-                <VideoIcon className="size-5" />
+                <Play className="size-5" fill="currentColor" />
               ) : (
-                <CarouselIcon className="size-5" />
+                <Images className="size-5" />
               )}
             </span>
           )}

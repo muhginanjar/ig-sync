@@ -1,6 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Copy,
+  Download,
+  ExternalLink,
+  Link,
+  LoaderCircle,
+  MessageCircle,
+  RotateCw,
+  Share2,
+} from "lucide-react";
 import type { ShareFile } from "./types";
 
 // Below this total size, files are fetched as soon as the page opens so the
@@ -8,6 +18,13 @@ import type { ShareFile } from "./types";
 const AUTO_PREPARE_BYTES = 15 * 1024 * 1024;
 
 type Status = "idle" | "preparing" | "ready" | "tap-again" | "error";
+
+/** instagram.com/p/<code>/ → instagram.com/p/<code>/comments/ (same for /reel/). */
+function commentsUrl(permalink: string) {
+  const url = new URL(permalink);
+  url.pathname = url.pathname.replace(/\/?$/, "/comments/");
+  return url.toString();
+}
 
 async function fetchFiles(files: ShareFile[]) {
   return Promise.all(
@@ -58,7 +75,7 @@ export default function ShareActions({
   }, [files, prepare]);
 
   async function shareLink() {
-    const url = window.location.href;
+    const url = permalink; // share the original Instagram post, not this page
     if (navigator.share) {
       try {
         await navigator.share({ title: document.title, url });
@@ -67,7 +84,7 @@ export default function ShareActions({
       }
     } else {
       await navigator.clipboard.writeText(url);
-      notify("Link disalin");
+      notify("Link Instagram disalin");
     }
   }
 
@@ -125,31 +142,47 @@ export default function ShareActions({
     error: "Coba lagi",
   }[status];
 
+  const MainIcon = status === "preparing" ? LoaderCircle : status === "error" ? RotateCw : Share2;
+
   const secondary =
-    "rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900";
+    "flex items-center justify-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900";
 
   return (
     <div className="space-y-2">
       <button
         onClick={shareFiles}
         disabled={status === "preparing"}
-        className="w-full rounded-lg bg-neutral-900 px-4 py-3 font-semibold text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-3 font-semibold text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
+        <MainIcon className={`size-5 ${status === "preparing" ? "animate-spin" : ""}`} />
         {mainLabel}
       </button>
+      <a
+        href={commentsUrl(permalink)}
+        target="_blank"
+        rel="noreferrer"
+        className={`${secondary} w-full py-2.5`}
+      >
+        <MessageCircle className="size-4" />
+        Komentar di Instagram
+      </a>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <button onClick={shareLink} className={secondary}>
-          Bagikan link
+          <Link className="size-4" />
+          Bagikan link IG
         </button>
         <button onClick={download} className={secondary}>
+          <Download className="size-4" />
           Download
         </button>
         {caption && (
           <button onClick={copyCaption} className={secondary}>
+            <Copy className="size-4" />
             Salin caption
           </button>
         )}
-        <a href={permalink} target="_blank" rel="noreferrer" className={`${secondary} text-center`}>
+        <a href={permalink} target="_blank" rel="noreferrer" className={secondary}>
+          <ExternalLink className="size-4" />
           Lihat di IG
         </a>
       </div>

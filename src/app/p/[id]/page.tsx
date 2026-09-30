@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPost } from "@/lib/posts";
+import BackButton from "@/components/BackButton";
 import MediaViewer from "@/components/MediaViewer";
 import ShareActions from "@/components/ShareActions";
 
@@ -41,6 +42,7 @@ export default async function PostPage({ params }: PageProps<"/p/[id]">) {
 
   return (
     <article className="mx-auto max-w-xl pb-16">
+      <BackButton />
       <MediaViewer items={files} />
       <div className="space-y-4 px-4 pt-4">
         <ShareActions files={files} caption={post.caption ?? ""} permalink={post.permalink} />
