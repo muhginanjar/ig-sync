@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { NavigationTracker } from "@/components/BackButton";
+import ReminderButton from "@/components/ReminderButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,6 +10,9 @@ export const metadata: Metadata = {
   title: { default: "Infimate Travel", template: "%s · Infimate Travel" },
   description: "Semua postingan @infimate.travel, siap dibagikan.",
 };
+
+const headerAction =
+  "flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100";
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -20,15 +24,19 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <Link href="/" className="font-semibold">
               @infimate.travel
             </Link>
-            <a
-              href="https://www.instagram.com/infimate.travel/"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
-            >
-              Buka di Instagram
-              <ExternalLink className="size-4" />
-            </a>
+            <div className="flex items-center gap-4">
+              <ReminderButton className={headerAction} />
+              <a
+                href="https://www.instagram.com/infimate.travel/"
+                target="_blank"
+                rel="noreferrer"
+                className={headerAction}
+              >
+                <span className="sm:hidden">Instagram</span>
+                <span className="hidden sm:inline">Buka di Instagram</span>
+                <ExternalLink className="size-4" />
+              </a>
+            </div>
           </div>
         </header>
         <main className="mx-auto max-w-4xl">{children}</main>
