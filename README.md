@@ -33,7 +33,7 @@ npm run dev            # http://localhost:3000
 npm ci
 npm run build
 npm run sync                     # sync pertama sekaligus membuat database
-pm2 start ecosystem.config.cjs   # web :3000 + cron sync (30 menit) + cron token (Senin 03:00)
+pm2 start ecosystem.config.cjs   # web :$PORT (default 3000) + cron sync (30 menit) + cron token (Senin 03:00)
 pm2 save && pm2 startup          # auto-start saat server reboot
 ```
 
@@ -43,7 +43,7 @@ Update:
 git pull && npm ci && npm run build && pm2 reload ig-sync-web
 ```
 
-Pasang Nginx + HTTPS di depan port 3000. Share file di HP hanya jalan lewat HTTPS.
+Ganti port lewat `PORT` di `.env`, lalu `pm2 delete ig-sync-web && pm2 start ecosystem.config.cjs --only ig-sync-web && pm2 save`. Pasang Nginx + HTTPS di depan port tersebut. Share file di HP hanya jalan lewat HTTPS.
 
 ## Cara kerja
 
