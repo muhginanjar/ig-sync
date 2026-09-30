@@ -74,22 +74,37 @@ export default function ShareActions({
     if (total <= AUTO_PREPARE_BYTES) prepare().catch(() => {});
   }, [files, prepare]);
 
+  /**
+   * Instagram, TikTok & co. ignore text passed through the share sheet, so the
+   * caption also goes to the clipboard. Started synchronously inside the tap,
+   * before any await, because clipboard access needs the user gesture.
+   */
+  function copyCaptionInBackground() {
+    if (!caption || !navigator.clipboard) return Promise.resolve(false);
+    return navigator.clipboard.writeText(caption).then(
+      () => true,
+      () => false,
+    );
+  }
+
   async function shareLink() {
     const url = permalink; // share the original Instagram post, not this page
     if (navigator.share) {
       try {
-        await navigator.share({ title: document.title, url });
+        // No `title`: WhatsApp & others would prepend it and repeat the caption.
+        await navigator.share({ text: caption || undefined, url });
       } catch (err) {
         if ((err as Error).name !== "AbortError") notify("Gagal membagikan link");
       }
     } else {
-      await navigator.clipboard.writeText(url);
-      notify("Link Instagram disalin");
+      await navigator.clipboard.writeText(caption ? `${caption}\n\n${url}` : url);
+      notify(caption ? "Caption + link Instagram disalin" : "Link Instagram disalin");
     }
   }
 
   async function shareFiles() {
     if (!navigator.canShare) return shareLink(); // e.g. most desktop browsers
+    const captionCopied = copyCaptionInBackground();
 
     const alreadyReady = status === "ready" || status === "tap-again";
     if (!alreadyReady) setStatus("preparing");
@@ -107,8 +122,9 @@ export default function ShareActions({
     }
 
     try {
-      await navigator.share({ files: fileObjs, title: document.title });
+      await navigator.share({ files: fileObjs, text: caption || undefined });
       setStatus("ready");
+      if (await captionCopied) notify("Caption juga disalin, tempel jika belum muncul");
     } catch (err) {
       const name = (err as Error).name;
       // Browsers require share() to be called right after a tap. If preparing
