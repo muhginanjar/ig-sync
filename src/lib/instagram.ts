@@ -47,6 +47,12 @@ async function igGet<T>(url: string): Promise<T> {
   return body as T;
 }
 
+/** The account the token belongs to. */
+export async function getProfile() {
+  const params = new URLSearchParams({ fields: "username", access_token: getAccessToken() });
+  return igGet<{ username: string }>(`${BASE}/me?${params}`);
+}
+
 /** Yields every post on the account, newest first, following pagination. */
 export async function* listAllMedia(): AsyncGenerator<IgMedia> {
   const params = new URLSearchParams({

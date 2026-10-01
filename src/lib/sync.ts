@@ -1,6 +1,7 @@
 import { and, eq, isNotNull, isNull, notInArray } from "drizzle-orm";
 import { getDb, postMedia, posts } from "@/db";
-import { listAllMedia, type IgChild, type IgMedia } from "./instagram";
+import { getProfile, listAllMedia, type IgChild, type IgMedia } from "./instagram";
+import { setSetting } from "./settings";
 import { getObject, putObject } from "./storage";
 import { uploadGridThumb } from "./thumbs";
 
@@ -143,6 +144,11 @@ export async function syncInstagram({
   full = false,
   log = console.log,
 }: { full?: boolean; log?: (m: string) => void } = {}) {
+  // The app's name and links follow whichever account the token belongs to.
+  const { username } = await getProfile();
+  setSetting("ig_username", username);
+  log(`Akun: @${username}`);
+
   const known = new Set(getDb().select({ id: posts.id }).from(posts).all().map((p) => p.id));
   const seen: string[] = [];
   const failed: string[] = [];

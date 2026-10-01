@@ -1,9 +1,10 @@
 import { reminderIcs } from "@/lib/reminder";
+import { siteUrl } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 export function GET(req: Request) {
-  const host = new URL(process.env.SITE_URL ?? req.url).host;
+  const host = (siteUrl() ?? new URL(req.url)).host;
   return new Response(reminderIcs(host), {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",

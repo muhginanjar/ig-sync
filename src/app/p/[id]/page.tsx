@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CalendarClock } from "lucide-react";
 import { isAdmin } from "@/lib/auth";
 import { getPost, isScheduled, parsePostedAt } from "@/lib/posts";
+import { filePrefix } from "@/lib/site";
 import BackButton from "@/components/BackButton";
 import MediaViewer from "@/components/MediaViewer";
 import ShareActions from "@/components/ShareActions";
@@ -39,6 +40,7 @@ export default async function PostPage({ params }: PageProps<"/p/[id]">) {
   const post = await getVisiblePost((await params).id);
   if (!post) notFound();
 
+  const prefix = filePrefix();
   const files = post.media.map((m) => ({
     id: m.id,
     type: m.mediaType,
@@ -46,7 +48,7 @@ export default async function PostPage({ params }: PageProps<"/p/[id]">) {
     sizeBytes: m.sizeBytes,
     displayUrl: `/media/${m.key}`,
     fileUrl: `/api/file/${m.id}`,
-    filename: `infimate-${post.id}-${m.position + 1}.${m.key.split(".").pop()}`,
+    filename: `${prefix}-${post.id}-${m.position + 1}.${m.key.split(".").pop()}`,
   }));
 
   return (

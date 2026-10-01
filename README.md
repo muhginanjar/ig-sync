@@ -18,6 +18,19 @@ npm run sync           # tarik semua post dari IG → Wasabi + SQLite
 npm run dev            # http://localhost:3000
 ```
 
+## Satu aplikasi per akun IG
+
+Tidak ada nama akun yang ditulis di kode. Untuk akun lain, deploy salinan repo ini dengan `.env` sendiri:
+
+| Variabel | Isi |
+|---|---|
+| `IG_ACCESS_TOKEN` | Token akun IG tersebut. Nama akun (`@username`) dan link profil diambil otomatis dari token saat sync. |
+| `SITE_URL` | Domain aplikasi, misalnya `https://ig.rembook.xyz` (tanpa `https://` juga diterima) |
+| `SITE_NAME` | Opsional: nama di header dan judul tab. Default: `@username` |
+| `PORT` | Port yang belum dipakai aplikasi lain di server |
+
+Setiap salinan memakai database sendiri (`data/app.db`). Bucket Wasabi boleh sama, tapi lebih rapi kalau dipisah.
+
 ## Perintah
 
 | Perintah | Fungsi |
