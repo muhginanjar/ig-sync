@@ -1,10 +1,18 @@
 // PM2 config. Start with: pm2 start ecosystem.config.cjs
-// Next.js reads .env itself, but picks its port before doing so, so PORT
-// is loaded here and passed to the process. The tsx scripts use dotenv too.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-require("dotenv").config({ path: `${__dirname}/.env`, quiet: true });
+// Next.js and the tsx scripts read .env themselves on every (re)start. Only
+// PORT is needed here, because Next picks its port before reading .env.
+//
+// .env is parsed, NOT loaded into process.env: PM2 copies this process's
+// environment into the apps and keeps it across reloads, which would pin
+// old values (password, token) even after .env changes.
+/* eslint-disable @typescript-eslint/no-require-imports */
+const fs = require("node:fs");
+const dotenv = require("dotenv");
+/* eslint-enable @typescript-eslint/no-require-imports */
 
-const PORT = process.env.PORT || "3000";
+const envFile = `${__dirname}/.env`;
+const fileEnv = fs.existsSync(envFile) ? dotenv.parse(fs.readFileSync(envFile)) : {};
+const PORT = fileEnv.PORT || "3000";
 
 module.exports = {
   apps: [
